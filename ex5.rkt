@@ -1,5 +1,5 @@
 #lang racket
-
+(require rackunit)
 (provide (all-defined-out))
 
 (define integers-from
@@ -13,6 +13,16 @@
 (define tail
   (lambda (lzl)
     ((cdr lzl))))
+
+
+;; Signature: lzl-map(f, lz)
+;; Type: [[T1 -&gt; T2] * Lzl(T1) -&gt; Lzl(T2)]
+(define lzl-map
+(lambda (f lzl)
+  (if (empty-lzl? lzl)
+      lzl
+      (cons-lzl (f (head lzl))
+                (lambda () (lzl-map f (tail lzl)))))))
 
 ;; Signature: take(lz-lst,n)
 ;; Type: [LzL*Number -> List]
@@ -39,20 +49,53 @@
 ; Purpose: Returns the concatination of the given two lists, with cont pre-processing
 (define append$
  (lambda (lst1 lst2 cont)
-   #f;@TODO
-  )
-)
+   (if (empty? lst1)
+              (cont lst2)
+              (append$ (cdr lst1)  lst2 (lambda (lst) (cont (cons (car lst1) lst))))))) 
+ 
 
 ;;; Q1.2
 ; Signature: equal-trees$(tree1, tree2, succ, fail) 
 ; Type: [Tree * Tree * [Tree ->T1] * [Pair->T2] -> T1 U T2
 ; Purpose: Determines the structure identity of a given two lists, with post-processing succ/fail
+(define id (lambda (x)  x))
 (define leaf? (lambda (x) (not (list? x))))
+ 
 (define equal-trees$ 
  (lambda (tree1 tree2 succ fail)
-   #f;@TODO
- )
+   (cond 
+         ((and (empty? tree1) (empty? tree2)) ;base case
+           (succ '()))
+         
+         ((or (empty? tree1) (empty? tree2)) ;case one of the tree empty 
+         (if (empty? tree1)
+              (fail tree2)
+              (fail tree1)
+             ))
+         
+        ((letrec (
+              (lhs (car tree1))
+              (rhs (car tree2))
+              )
+          (cond
+         ((and (leaf? lhs) (leaf? rhs)) ;case they both leaf
+           (equal-trees$ (cdr tree1) (cdr tree2)
+              (lambda (x)
+              (letrec
+              ((y (cons  lhs rhs)))
+                (letrec ((z (cons y x))) (succ z)))) fail))
+         
+        ((or (leaf? lhs)(leaf? rhs)) ;case one is leaf and the second not
+         (fail (cons lhs rhs)))
+        
+        ((and (list? lhs) (list? rhs)) ;case both nodes
+         (equal-trees$ lhs rhs (lambda (sec) (equal-trees$ (cdr tree1) (cdr tree2) (lambda (k) (succ (cons sec k))) fail)) fail)) 
+         (fail (cons tree1 tree2))
+        
+       ))))
+          ) 
 )
+      
 
 ;;; Q2a
 ; Signature: reduce1-lzl(reducer, init, lzl) 
@@ -60,7 +103,10 @@
 ; Purpose: Returns the reduced value of the given lazy list
 (define reduce1-lzl 
   (lambda (reducer init lzl)
-   #f ;@TODO
+    (if (empty-lzl? lzl)
+        init
+     (reduce1-lzl reducer (reducer init (head lzl)) (tail lzl))) 
+   
   )
 )  
 
@@ -70,7 +116,9 @@
 ; Purpose: Returns the reduced value of the first n items in the given lazy list
 (define reduce2-lzl 
   (lambda (reducer init lzl n)
-    #f ;@TODO
+    (if (or (= n 0) (empty-lzl? lzl))
+            init
+        (reduce2-lzl reducer (reducer init (head lzl)) (tail lzl) (- n 1)))
   )
 )  
 
@@ -80,9 +128,12 @@
 ; Purpose: Returns the reduced values of the given lazy list items as a lazy list
 (define reduce3-lzl 
   (lambda (reducer init lzl)
-    #f ;@TODO
+    (if (empty-lzl? lzl)
+       '()
+     (cons-lzl (reducer init (head lzl)) (lambda () (reduce3-lzl reducer (reducer init (head lzl)) (tail lzl)))))
   )
-)  
+)
+
  
 ;;; Q2e
 ; Signature: integers-steps-from(from,step) 
@@ -90,9 +141,17 @@
 ; Purpose: Returns a list of integers from 'from' with 'steps' jumps
 (define integers-steps-from
   (lambda (from step)
-    #f ; @TODO
+    (cons-lzl from (lambda () (integers-steps-from (+ from step) step)))
   )
 )
+
+
+(define pi-sum
+  (lambda (a b)
+    (if (> a b)
+        0
+        (+ (/ 1 (* a (+ a 2)))
+           (pi-sum (+ a 4) b)))))
 
 ;;; Q2f
 ; Signature: generate-pi-approximations() 
@@ -100,6 +159,10 @@
 ; Purpose: Returns the approximations of pi as a lazy list
 (define generate-pi-approximations
   (lambda ()
-    #f ; @TODO
+    (reduce3-lzl + 0 (lzl-map (lambda (x) (* 8 x)) (lzl-map (lambda (a) (/ 1 (* a (+ a 2)))) (integers-steps-from 1 4))))
+    
    )
  )
+
+;(take (lzl-map (lambda (x) (* 8 x)) (generate-pi-approximations)) 10)
+;(take (generate-pi-approximations) 10)            
