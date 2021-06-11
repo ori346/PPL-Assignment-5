@@ -40,3 +40,19 @@ book("The Lord of the Rings", 4, 4, 1250).
 
 % You can add more facts.
 % Fill in the Purpose, Signature as requested in the instructions here
+authorOfGenre(GenreName, AuthorName):-author(Id,AuthorName)
+    		,book(BookName ,Id,GenreId , _X),genre(GenreId , GenreName).
+%max of list
+max_l([X],X) :- !, true.
+%max_l([X],X). %unuse cut
+%max_l([X],X):- false.
+max_l([X|Xs], M):- max_l(Xs, M), M >= X.
+max_l([X|Xs], X):- max_l(Xs, M), X >  M.
+
+longestBook(AuthorId, BookName):- findall(Length , book(_X , AuthorId ,_G , Length), Result),
+    max_list(Result ,Y), 
+    book(BookName , AuthorId ,_G ,Y) .
+
+versatileAuthor(AuthorName):-author(Id, AuthorName),
+    						findall(Genre , book(_N , Id , Genre ,_L) ,Result) 
+    						, length( Result ,X) , X > 2. 
